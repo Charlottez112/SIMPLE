@@ -19,6 +19,10 @@ bash "Miniconda3-latest-Linux-x86_64.sh" -b -p "$CONDA_PREFIX"
 rm "Miniconda3-latest-Linux-x86_64.sh"
 popd
 
+# Initialize conda
+"$HOME/.local/miniconda3/condabin/conda init"
+source "$HOME/.local/miniconda3/etc/profile.d/conda.sh"
+
 # Create python environment
 conda create -y -n noether python=3.8
 conda activate noether
