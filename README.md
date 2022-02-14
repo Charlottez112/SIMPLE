@@ -7,7 +7,7 @@
 ```console
 $ mkdir workspace; cd workspace
 $ git clone git@github.com:Charlottez112/eecs545_project.git
-$ bash setup.sh
+$ bash misc/setup.sh
 ```
 
 ## Submit GPU Jobs
@@ -15,7 +15,7 @@ $ bash setup.sh
 See `job-sample.sh` for a reference job submission that works. Note that the sample limits the runtime of the job to 7 minutes (guessing that a shorter runtime job will be preferred by the scheduler). 7 minutes is enough to complete one epoch with noether networks and will be a good time for debugging. When submitting actual jobs, make sure to increase the job duration.
 
 ```console
-$ sbatch job-sample.sh
+$ sbatch misc/job-sample.sh
 ```
 
 ## Noether Networks for video prediction
