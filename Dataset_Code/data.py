@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 
-def custom_collate(data):
+def CustomCollate(data):
     l = len(data)
     state = np.zeros( (l , 60, 4096, 6))
     t = np.zeros( (l , 1) )
@@ -20,7 +20,7 @@ def custom_collate(data):
     return {"position" : state[: , :, :, 0:3] , "velocity" : state[: , :, :, 3:6] , "temperature" : t}
 
 
-class Load_Simulation(Dataset):
+class LoadSimulation(Dataset):
     def __init__(self, n_particles = 4096, n_frame = 60):
         self.n_particles = n_particles
         self.n_frame = n_frame
