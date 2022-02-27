@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 
-def CustomCollate(data):
+def custom_collate(data):
     l = len(data)
     state = np.zeros( (l , 60, 4096, 6))
     t = np.zeros( (l , 1) )
