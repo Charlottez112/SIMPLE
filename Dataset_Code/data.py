@@ -3,6 +3,7 @@ import glob
 import torch
 from torch.utils.data import Dataset, DataLoader
 
+
 def custom_collate(data):
     position = np.stack([item["position"] for item in data])
     velocity = np.stack([item["velocity"] for item in data])
