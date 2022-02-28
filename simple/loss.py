@@ -17,8 +17,8 @@ def noether_loss_exact(quantities: list[torch.Tensor]) -> torch.Tensor:
     """The Noether loss function that exactly conserves quantities.
 
     Args:
-        quantities (list[Tensor]): List of quantity tensors, each of
-            shape [B, e].
+        quantities (list[Tensor]): List of quantity tensors from each
+            time step.
 
     The first item of the `quantities` list serves as the ground truth
     quantity that all subsequent quantities must be similar to.
@@ -32,8 +32,8 @@ def noether_loss_approx(quantities: list[torch.Tensor]) -> torch.Tensor:
     """The Noether loss function that approximately conserves quantities.
 
     Args:
-        quantities (list[Tensor]): List of quantity tensors, each of
-            shape [B, e].
+        quantities (list[Tensor]): List of quantity tensors from each
+            time step.
 
     Compares quantities of adjacent time steps and enforces that they
     be similar.
