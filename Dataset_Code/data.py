@@ -29,8 +29,6 @@ class SimulationDataset(Dataset):
     
     def __getitem__(self, idx):
         file_path = self.data[idx]
-        simulation = np.load(file_path)
-        current_idx = {"position" : simulation['position'] , "velocity" : simulation['velocity']  , "temperature" : simulation['temperature'].item() , "boxdim" : simulation['boxdim']}
-        return current_idx
+        return np.load(file_path)
 
 
