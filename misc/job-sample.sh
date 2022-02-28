@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=noether-ramp
+#SBATCH --job-name=simple-training
 #SBATCH --account=eecs545s001w22_class
 #SBATCH --partition=gpu
 #SBATCH --time=00-00:07:00
@@ -11,10 +11,10 @@
 #SBATCH --mem=32GB
 #SBATCH --export=ALL
 
-cd ~/workspace/noether-networks
+cd ~/workspace/eecs545_project
 
 source ~/.local/miniconda3/etc/profile.d/conda.sh
-conda activate noether
+conda activate simple
 
 python train.py \
     --image_width 64 \
