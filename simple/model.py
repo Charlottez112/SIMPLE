@@ -39,7 +39,9 @@ class StatePredictor(nn.Module):
         # Three-layer feed forward network as the next state predictor.
         self.layers = nn.Sequential(
             nn.Linear(len_input, 32),
+            nn.ReLU(),
             nn.Linear(32, 16),
+            nn.ReLU(),
             nn.Linear(16, 6),
         )
 
@@ -133,7 +135,9 @@ class LearnedQuantityPredictor(nn.Module):
         # Three-layer feed forward network as the quantity predictor.
         self.layers = nn.Sequential(
             nn.Linear(len_input, 128),
+            nn.ReLU(),
             nn.Linear(128, 32),
+            nn.ReLU(),
             nn.Linear(32, embedding_dim),
         )
 
