@@ -43,13 +43,13 @@ class StatePredictor(nn.Module):
 
     def forward(self, data: dict[str, torch.Tensor]) -> torch.Tensor:
         """Predict the next state of all particles."""
-        # Unpack data
+        # Unpack data.
         position = data["position"]  # [B, N, 3]
         velocity = data["velocity"]  # [B, N, 3]
         init_config = data["init"]   # [B, I]
         B, N, _ = position.shape
+        _, I = init_config.shape
         k = self.num_neighbors
-
 
         # Compute pairwise distances.
         # NOTE: This uses O(N^2) memory. Might have to loop over particles if
@@ -83,15 +83,15 @@ class StatePredictor(nn.Module):
         # Offset only the position vector.
         position_nn_offset = position_nn - position.unsqueeze(2)  # [B, N, k, 3]
 
-        # Concatenate position, velocity, and init_config vectors.
+        # Concatenate velocity, position, and init_config vectors.
         # Shape: [B, N, 3*(k+1)+3*k+I]
         current_state = torch.concat([
-            position_nn_offset.view(B, N, -1),
-            velocity_nn.view(B, N, -1),
+            velocity_nn.view(B, N, 3*(k+1)),
+            position_nn_offset.view(B, N, 3*k),
             init_config.unsqueeze(1).repeat(1, N, 1),
         ], dim=2)
         # Shape: [B*N, 3*(k+1)+3*k+I]
-        flattened_current_state = current_state.reshape(-1, current_state.shape[-1])
+        flattened_current_state = current_state.reshape(B*N, 6*k+3+I)
 
         # Run through neural network.
         pred = self.layers(flattened_current_state)  # [B*N, 6]
@@ -101,3 +101,51 @@ class StatePredictor(nn.Module):
         unflattened_pred[:, :, :3] += position
 
         return unflattened_pred
+
+
+class QuantityPredictor(nn.Module):
+    """Model that predicts the quantity to be conserved."""
+
+    def __init__(self, embedding_dim: int = 8, num_particles: int = 4096, len_init: int = 3) -> None:
+        """Intialize the model.
+
+        Args:
+            embedding_dim (int): Dimension of the Noether embedding.
+            num_particles (int): Number of particles in the system.
+            init_len (int): The length of the initial configuration vector.
+        """
+        self.embedding_dim = embedding_dim
+        self.num_particles = num_particles
+        self.len_init = len_init
+
+        # Input components concatenated:
+        # - Velocity vectors of all particles
+        # - Position offset vectors of all particles
+        # - Initial configuration vector
+        len_input = num_particles * 6 + len_init
+
+        # Three-layer feed forward network as the quantity predictor.
+        self.layers = nn.Sequential(
+            nn.Linear(len_input, 128),
+            nn.Linear(128, 32),
+            nn.Linear(32, embedding_dim),
+        )
+
+    def forward(self, data: dict[str, torch.Tensor]) -> torch.Tensor:
+        """Predict the conserved quantity."""
+        # Unpack data
+        position = data["position"]  # [B, N, 3]
+        velocity = data["velocity"]  # [B, N, 3]
+        init_config = data["init"]   # [B, I]
+        B, N, _ = position.shape
+
+        # Concatenate position, velocity, and init_config vectors.
+        # Shape: [B, 6*N+I]
+        current_state = torch.concat([
+            position.view(B, 3*N),
+            velocity.view(B, 3*N),
+            init_config,
+        ], dim=2)
+
+        # Run through the neural network.
+        return self.layers(current_state)  # [B, e]
