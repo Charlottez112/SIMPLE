@@ -25,6 +25,8 @@ class StatePredictor(nn.Module):
             num_neighbors (int): The number of nearest neighbors to
                 consider when predicting the particle's next state.
         """
+        super().__init__()
+
         self.len_init = len_init
         self.num_neighbors = num_neighbors
 
@@ -41,12 +43,14 @@ class StatePredictor(nn.Module):
             nn.Linear(16, 6),
         )
 
-    def forward(self, data: dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(
+        self,
+        position: torch.Tensor,   # [B, N, 3]
+        velocity: torch.Tensor,   # [B, N, 3]
+        init_config: torch.Tensor # [B, I]
+    ) -> torch.Tensor:
         """Predict the next state of all particles."""
         # Unpack data.
-        position = data["position"]  # [B, N, 3]
-        velocity = data["velocity"]  # [B, N, 3]
-        init_config = data["init"]   # [B, I]
         B, N, _ = position.shape
         _, I = init_config.shape
         k = self.num_neighbors
@@ -103,7 +107,7 @@ class StatePredictor(nn.Module):
         return unflattened_pred
 
 
-class QuantityPredictor(nn.Module):
+class LearnedQuantityPredictor(nn.Module):
     """Model that predicts the quantity to be conserved."""
 
     def __init__(self, embedding_dim: int = 8, num_particles: int = 4096, len_init: int = 3) -> None:
@@ -114,6 +118,8 @@ class QuantityPredictor(nn.Module):
             num_particles (int): Number of particles in the system.
             init_len (int): The length of the initial configuration vector.
         """
+        super().__init__()
+
         self.embedding_dim = embedding_dim
         self.num_particles = num_particles
         self.len_init = len_init
@@ -131,12 +137,14 @@ class QuantityPredictor(nn.Module):
             nn.Linear(32, embedding_dim),
         )
 
-    def forward(self, data: dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(
+        self,
+        position: torch.Tensor,   # [B, N, 3]
+        velocity: torch.Tensor,   # [B, N, 3]
+        init_config: torch.Tensor # [B, I]
+    ) -> torch.Tensor:
         """Predict the conserved quantity."""
         # Unpack data
-        position = data["position"]  # [B, N, 3]
-        velocity = data["velocity"]  # [B, N, 3]
-        init_config = data["init"]   # [B, I]
         B, N, _ = position.shape
 
         # Concatenate position, velocity, and init_config vectors.
@@ -149,3 +157,18 @@ class QuantityPredictor(nn.Module):
 
         # Run through the neural network.
         return self.layers(current_state)  # [B, e]
+
+
+class TemperaturePredictor(nn.Module):
+    """Simple module that computes the temperature of each state.
+
+    The computed value is actually the mean of all particle's velocity.
+    """
+
+    def forward(
+        self,
+        state: torch.Tensor,  # [B, N, 6]
+    ) -> torch.Tensor:
+        """Computes the temperature of the given state."""
+        velocities = torch.linalg.vector_norm(state[:, :, 3:], dim=2)  # [B, N]
+        return torch.mean(velocities, dim=1, keepdim=True)  # [B, 1]
