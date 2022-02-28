@@ -17,12 +17,22 @@ def custom_collate(data):
 
 
 class SimulationDataset(Dataset):
-    def __init__(self, n_particles = 4096, n_frame = 60):
+    def __init__(self, split, split_ratio=[0.6, 0.2, 0.2], n_particles = 4096, n_frame = 60):
         self.n_particles = n_particles
         self.n_frame = n_frame
-        self.data = []
+        self.path = []
         for file in glob.glob('Dataset/*'):
-            self.data.append(file)
+            self.path.append(file)
+        if split == "train":
+            init_idx = 0
+            end_idx = int(len(self.path) * split_ratio[0])
+        elif split == "test":
+            init_idx = int(len(self.path) * split_ratio[0]) 
+            end_idx = int(len(self.path) * (split_ratio[0] + split_ratio[1]))
+        elif split == "eval":
+            init_idx = int(len(self.path) * (split_ratio[0] + split_ratio[1]))
+            end_idx = int(len(self.path))
+        self.data = self.path[init_idx:end_idx]
 
     def __len__(self):
         return len(self.data)
@@ -32,3 +42,6 @@ class SimulationDataset(Dataset):
         return np.load(file_path)
 
 
+class SimulationDataLoader(DataLoader):
+    def __init__(self):
+        super().__init__(collate_fn=custom_collate)
