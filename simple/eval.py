@@ -11,14 +11,13 @@ from .loss import task_loss, noether_loss_approx, noether_loss_exact
 from .util import iter_frames
 
 
-def train_one_epoch(
+def evaluate(
     f: nn.Module,
     g_list: list[nn.Module],
     loader: DataLoader,
-    outer_optimizer: torch.optim.Optimizer,
     args: argparse.Namespace,
-):
-    """Train the model for one epoch."""
+) -> float:
+    """Evaluate the given model."""
     # Select Noether loss function.
     if args.conserve_quantity == "approx":
         noether_loss_func = noether_loss_approx
@@ -27,12 +26,15 @@ def train_one_epoch(
     else:
         raise ValueError("--conserve-quantity must be 'approx' or 'exact'.")
 
-    # Set models to training mode.
-    f.train()
+    # Set models to evaluation mode.
+    f.eval()
     for g in g_list:
-        g.train()
+        g.eval()
 
-    # Train.
+    # Evaluate.
+    # Saves all task losses and predicted states.
+    task_losses = []
+    state_preds = []
     for i, data in enumerate(loader):
         print(f"Batch {i}")
 
@@ -44,7 +46,9 @@ def train_one_epoch(
 
         # Initialize the inner optimizer (the one that does the tailoring)
         inner_optimizer = torch.optim.Adam(params=f.parameters(), lr=args.inner_lr)
-        with higher.innerloop_ctx(f, inner_optimizer, copy_initial_weights=False) \
+        # Since we're not performing the outer loop updates,
+        # we don't need to track higher order gradients.
+        with higher.innerloop_ctx(f, inner_optimizer, copy_initial_weights=False, track_higher_grads=False) \
                 as (func_f, diff_inner_optimizer):
 
             # Iterate through frames and compute Noether embeddings.
@@ -62,24 +66,29 @@ def train_one_epoch(
             noether_loss = noether_loss_func(noether_embeddings)
             diff_inner_optimizer.step(noether_loss)
 
-            # Iterate through timesteps again to compute task losses.
-            task_losses = []
-            curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
-            label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
-            for current_state, next_state in zip(curr_iter, label_iter):
-                # Unpack data.
-                position, velocity, boxdim = current_state
-                label = torch.concat([next_state[0], next_state[1]], dim=2)
+            # Henceforth are pure inference.
+            with torch.no_grad():
+                # Iterate through timesteps again to compute task losses.
+                curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
+                label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
+                for i, (current_state, next_state) in enumerate(zip(curr_iter, label_iter)):
+                    # Unpack data.
+                    position, velocity, boxdim = current_state
+                    label = torch.concat([next_state[0], next_state[1]], dim=2)
 
-                # Compute the next state prediction.
-                next_state_pred = func_f(position, velocity, boxdim)
-                task_losses.append(task_loss(next_state_pred, label))
+                    # Compute the next state prediction.
+                    # On the first step, the initial position, velocity, and boxdim are input.
+                    # On all subsequent steps, the previous step's position and velocity preds,
+                    # plus the current timestep's boxdim (from the user) are input.
+                    if i == 0:
+                        next_state_pred = func_f(position, velocity, boxdim)
+                    else:
+                        next_state_pred = func_f(state_preds[-1][:, :, 0:3], state_preds[-1][:, :, 3:6], boxdim)
 
-            # Compute the outer loop gradients (including Hessians).
-            torch.stack(task_losses).mean().backward()
+                    # Compute and save task loss.
+                    task_losses.append(task_loss(next_state_pred, label).cpu().detach())
 
-        # Update the state predictor and the quantity predictos.
-        outer_optimizer.step()
+                    # Save predictions.
+                    state_preds.append(next_state_pred.cpu().detach())
 
-        # Reset gradients.
-        outer_optimizer.zero_grad(set_to_none=True)
+    return sum(task_losses) / len(task_losses)

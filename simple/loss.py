@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 
 
-def task_error(pred: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
+def task_loss(pred: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
     """A function that measures how accurate the state prediction is.
 
     Args:
