@@ -37,25 +37,31 @@ def train_one_epoch(
         print(f"Batch {i}")
 
         # Unpack data.
-        sim_position: torch.Tensor = data["position"]        # [B, F, N, 3]
-        sim_velocity: torch.Tensor = data["velocity"]        # [B, F, N, 3]
+        sim_position: torch.Tensor = data["position"]  # [B, F, N, 3]
+        sim_velocity: torch.Tensor = data["velocity"]  # [B, F, N, 3]
         # sim_temperature: torch.Tensor = data["temperature"]  # [B, F]
-        sim_boxdim: torch.Tensor = data["boxdim"]            # [B, F]
+        sim_boxdim: torch.Tensor = data["boxdim"]  # [B, F]
 
         # Initialize the inner optimizer (the one that does the tailoring)
         inner_optimizer = torch.optim.Adam(params=f.parameters(), lr=args.inner_lr)
-        with higher.innerloop_ctx(f, inner_optimizer, copy_initial_weights=False) \
-                as (func_f, diff_inner_optimizer):
+        with higher.innerloop_ctx(f, inner_optimizer, copy_initial_weights=False) as (
+            func_f,
+            diff_inner_optimizer,
+        ):
 
             # Iterate through frames and compute Noether embeddings.
             noether_embeddings = []
-            for position, velocity, boxdim in iter_frames(sim_position, sim_velocity, sim_boxdim):
+            for position, velocity, boxdim in iter_frames(
+                sim_position, sim_velocity, sim_boxdim
+            ):
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
 
                 # Run through all quantity predictors to compute Noether embeddings.
                 # NOTE: All quantity predictor modules must return tensors of shape [B, e].
-                noether_embedding = torch.concat([g(next_state_pred) for g in g_list], dim=1)
+                noether_embedding = torch.concat(
+                    [g(next_state_pred) for g in g_list], dim=1
+                )
                 noether_embeddings.append(noether_embedding)
 
             # Tailor the state predictor on the Noether loss.

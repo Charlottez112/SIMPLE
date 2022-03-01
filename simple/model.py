@@ -138,15 +138,13 @@ class LearnedQuantityPredictor(nn.Module):
             nn.Linear(32, embedding_dim),
         )
 
-    def forward(
-        self, state: torch.Tensor# [B, N, 6]
-    ) -> torch.Tensor:
+    def forward(self, state: torch.Tensor) -> torch.Tensor:  # [B, N, 6]
         """Predict the conserved quantity."""
         # Unpack data
         B, N, _ = state.shape
 
         # Run through the neural network.
-        return self.layers(state.view(B, 6*N))  # [B, e]
+        return self.layers(state.view(B, 6 * N))  # [B, e]
 
 
 class TemperaturePredictor(nn.Module):

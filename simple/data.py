@@ -1,6 +1,7 @@
-import numpy as np
 import glob
+
 import torch
+import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -14,6 +15,7 @@ def custom_collate(data):
     velocity = torch.from_numpy(velocity)
     temp = torch.from_numpy(temp)
     dim = torch.from_numpy(dim)
+
     return {
         "position": position,
         "velocity": velocity,
@@ -23,9 +25,8 @@ def custom_collate(data):
 
 
 class SimulationDataset(Dataset):
-    def __init__(self, n_particles=4096, n_frame=60):
-        self.n_particles = n_particles
-        self.n_frame = n_frame
+    def __init__(self, split: str = "train"):
+        # TODO
         self.data = []
         for file in glob.glob("Dataset/*"):
             self.data.append(file)
@@ -36,3 +37,14 @@ class SimulationDataset(Dataset):
     def __getitem__(self, idx):
         file_path = self.data[idx]
         return np.load(file_path)
+
+
+class SimulationDataLoader(DataLoader):
+    def __init__(self, *args, split: str = "train", **kwargs) -> None:
+        """Initialize the data loader."""
+        if "dataset" in kwargs:
+            raise ValueError("'dataset' keyword argument is not supported.")
+
+        dataset = SimulationDataset(split)
+
+        super().__init__(*args, dataset=dataset, **kwargs)
