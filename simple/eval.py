@@ -74,6 +74,8 @@ def evaluate(
             # Henceforth are pure inference.
             with torch.no_grad():
                 # Iterate through timesteps again to compute task losses.
+                # Note that we do not perform inference on the last frame because there is
+                # no ground truth state for it's next state.
                 curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
                 label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
                 for i, (current_state, next_state) in enumerate(
@@ -90,16 +92,22 @@ def evaluate(
                     if i == 0:
                         next_state_pred = func_f(position, velocity, boxdim)
                     else:
+                        prev_state_pred = state_preds[-1]
                         next_state_pred = func_f(
-                            state_preds[-1][:, :, 0:3],
-                            state_preds[-1][:, :, 3:6],
+                            prev_state_pred[:, :, 0:3],
+                            prev_state_pred[:, :, 3:6],
                             boxdim,
                         )
+                        # No need to keep it in CUDA now we're done with it.
+                        state_preds[-1] = prev_state_pred.cpu()
 
                     # Compute and save task loss.
                     task_losses.append(task_loss(next_state_pred, label).cpu().detach())
 
-                    # Save predictions.
-                    state_preds.append(next_state_pred.cpu().detach())
+                    # Save prediction. This is left in CUDA memory for the next frame prediction.
+                    state_preds.append(next_state_pred.detach())
+
+                # Send the second-to-last frame's next frame prediction to CPU.
+                state_preds[-1] = state_preds[-1].cpu()
 
     return sum(task_losses) / len(task_losses)
