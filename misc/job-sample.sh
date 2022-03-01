@@ -14,7 +14,7 @@
 cd ~/workspace/eecs545_project
 
 source ~/.local/miniconda3/etc/profile.d/conda.sh
-conda activate simple
+conda activate noether
 
 python train.py \
     --image_width 64 \

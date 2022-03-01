@@ -15,8 +15,8 @@ popd
 source "$HOME/.local/miniconda3/etc/profile.d/conda.sh"
 
 # Create python environment
-conda create -y -n simple python=3.8
-conda activate simple
+conda create -y -n noether python=3.8
+conda activate noether
 
 # Install dependencies
 conda install -y -c pytorch pytorch==1.10.1 cudatoolkit==11.3.1
