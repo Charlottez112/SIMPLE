@@ -4,6 +4,8 @@ import argparse
 
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
+import datetime
 
 from .model import StatePredictor, TemperaturePredictor
 from .data import SimulationDataLoader
@@ -11,10 +13,14 @@ from .train import train_one_epoch
 from .eval import evaluate
 
 
+
 def main(args):
     # Initialize models.
     f = StatePredictor(args.num_neighbors)
     g_list: list[nn.Module] = [TemperaturePredictor()]
+    
+    current_date = datetime.date.today()
+    writer = SummaryWriter(f'./Log/{current_date}')
 
     # Initialize data loaders.
     train_loader = SimulationDataLoader(
@@ -39,9 +45,12 @@ def main(args):
     # Run training.
     for epoch in range(args.num_epochs):
         print(f"Epoch {epoch}")
-        train_one_epoch(f, g_list, train_loader, outer_optimizer, args)
+        train_one_epoch(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
         validation_error = evaluate(f, g_list, eval_loader, args)
         print(f"validation error: {validation_error}")
+        writer.add_scalar('Val_error', validation_error, epoch)
+        writer.flush()
+    writer.close()
 
 
 if __name__ == "__main__":

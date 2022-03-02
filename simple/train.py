@@ -16,6 +16,8 @@ def train_one_epoch(
     g_list: list[nn.Module],
     loader: DataLoader,
     outer_optimizer: torch.optim.Optimizer,
+    epoch: int,
+    writer: torch.utils.tensorboard.SummaryWriter,
     args: argparse.Namespace,
 ):
     """Train the model for one epoch."""
@@ -67,6 +69,7 @@ def train_one_epoch(
             # Tailor the state predictor on the Noether loss.
             noether_loss = noether_loss_func(noether_embeddings)
             diff_inner_optimizer.step(noether_loss)
+            writer.add_scalar('Loss/neother', noether_loss, epoch)
 
             # Iterate through timesteps again to compute task losses.
             task_losses = []
@@ -82,8 +85,10 @@ def train_one_epoch(
                 task_losses.append(task_loss(next_state_pred, label))
 
             # Compute the outer loop gradients (including Hessians).
-            torch.stack(task_losses).mean().backward()
-
+            mean_loss = torch.stack(task_losses).mean()
+            mean_loss.backward()
+            writer.add_scalar('Loss/task', mean_loss, epoch)
+            writer.flush()
         # Update the state predictor and the quantity predictos.
         outer_optimizer.step()
 
