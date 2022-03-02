@@ -46,6 +46,16 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
+    parser.add_argument('--num_epochs', default=100, type=int, help='number of epochs')
+    parser.add_argument('--batch_size', default=8, type=int, help='batch size')
+    parser.add_argument('--outer_lr', default=1e-4, type=float, help='learning rate for outer loop')
+    parser.add_argument('--inner_lr', default=1e-4, type=float, help='learning rate for inner loop')
+    parser.add_argument('--num_workers', default=1, type=int, help='num_workers in Dataloader') 
+    parser.add_argument('--num_neighbors', default=10, type=int, help='number of neighbors')
+    parser.add_argument('--conserve_quantity', default='approx', type=str, help='conserved quantity')
+    parser.add_argument('--device', default='cuda', type=str, help='cuda or cpu')
+    
     args = parser.parse_args()
 
     main(args)
