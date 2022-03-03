@@ -26,9 +26,12 @@ def custom_collate(data):
 
 class SimulationDataset(Dataset):
     def __init__(self, split: str = "train"):
-        # TODO
+        """Load the dataset from the directory specified by `split`.
+           `split` defaults to ``'train'``. Valid `split` modes: ``'train'``,
+           ``'test'``, ``'eval'``
+        """
         self.data = []
-        for file in glob.glob("Dataset/*"):
+        for file in glob.glob(f"Dataset/{split}"):
             self.data.append(file)
 
     def __len__(self):
