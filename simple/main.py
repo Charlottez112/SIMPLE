@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import datetime
+import os
 
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
-import datetime
+
 
 from .model import StatePredictor, TemperaturePredictor
 from .data import SimulationDataLoader
@@ -19,6 +21,7 @@ def main(args):
     g_list: list[nn.Module] = [TemperaturePredictor()]
 
     current_date = datetime.date.today()
+    os.makedirs('./Log', exist_ok=True)
     writer = SummaryWriter(f'./Log/{current_date}')
 
     # Initialize data loaders.
