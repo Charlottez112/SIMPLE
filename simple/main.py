@@ -61,8 +61,8 @@ if __name__ == "__main__":
     parser.add_argument('--inner_lr', default=1e-4, type=float, help='learning rate for inner loop')
     parser.add_argument('--num_workers', default=1, type=int, help='num_workers in Dataloader') 
     parser.add_argument('--num_neighbors', default=10, type=int, help='number of neighbors')
-    parser.add_argument('--conserve_quantity', default='approx', type=str, help='conserved quantity')
-    parser.add_argument('--device', default='cuda', type=str, help='cuda or cpu')
+    parser.add_argument('--conserve_quantity', default='approx', choices=['approx', 'exact'], type=str, help='conserved quantity')
+    parser.add_argument('--device', default='cuda', choices=['cuda', 'cpu'], type=str, help='cuda or cpu')
     
     args = parser.parse_args()
 
