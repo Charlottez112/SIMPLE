@@ -14,7 +14,7 @@
 cd ~/workspace/eecs545_project
 
 source ~/.local/miniconda3/etc/profile.d/conda.sh
-conda activate simple 
+conda activate noether
 
 python main.py \
     --num_epochs 100 \
