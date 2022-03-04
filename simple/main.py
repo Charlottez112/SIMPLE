@@ -16,8 +16,10 @@ from .eval import evaluate
 
 
 def main(args):
+    device = torch.device(args.device)
     # Initialize models.
     f = StatePredictor(args.num_neighbors)
+    f.to(device)
     g_list: list[nn.Module] = [TemperaturePredictor()]
 
     current_date = datetime.date.today()
@@ -41,6 +43,7 @@ def main(args):
     # Initialize the outer optimizer (the one that backprops from task_loss).
     outer_params = list(f.parameters())
     for g in g_list:
+        g.to(device)
         outer_params.extend(list(g.parameters()))
     outer_optimizer = torch.optim.Adam(params=outer_params, lr=args.outer_lr)
 
