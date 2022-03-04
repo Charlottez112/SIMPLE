@@ -161,4 +161,4 @@ class TemperaturePredictor(nn.Module):
     ) -> torch.Tensor:
         """Computes the temperature of the given state."""
         kinetic_energy = torch.power(state[:, :, 3:], exponent=2)  # [B, N]
-        return torch.mean(kinetic_energy, dim=1, keepdim=True)  # [B, 1]
+        return torch.div(torch.mean(kinetic_energy, dim=1, keepdim=True), 3) # [B, 1]
