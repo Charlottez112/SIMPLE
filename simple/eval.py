@@ -26,6 +26,7 @@ def evaluate(
     else:
         raise ValueError("--conserve-quantity must be 'approx' or 'exact'.")
 
+    device = torch.device(args.device)
     # Set models to evaluation mode.
     f.eval()
     for g in g_list:
@@ -56,7 +57,12 @@ def evaluate(
             noether_embeddings = []
             for position, velocity, boxdim in iter_frames(
                 sim_position, sim_velocity, sim_boxdim
-            ):
+            ):  
+
+                position.to(device)
+                velocity.to(device)
+                boxdim.to(device)
+
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
 
@@ -83,7 +89,12 @@ def evaluate(
                 ):
                     # Unpack data.
                     position, velocity, boxdim = current_state
+                    position.to(device)
+                    velocity.to(device)
+                    boxdim.to(device)
+
                     label = torch.concat([next_state[0], next_state[1]], dim=2)
+                    label.to(device)
 
                     # Compute the next state prediction.
                     # On the first step, the initial position, velocity, and boxdim are input.

@@ -16,9 +16,13 @@ from .eval import evaluate
 
 
 def main(args):
+    device = torch.device(args.device)
     # Initialize models.
     f = StatePredictor(args.num_neighbors)
+    f.to(device)
     g_list: list[nn.Module] = [TemperaturePredictor()]
+    for g in g_list:
+        g.to(device)
 
     current_date = datetime.date.today()
     os.makedirs('./Log', exist_ok=True)

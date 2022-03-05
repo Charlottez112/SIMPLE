@@ -29,7 +29,9 @@ def train_one_epoch(
     else:
         raise ValueError("--conserve-quantity must be 'approx' or 'exact'.")
 
+    
     # Set models to training mode.
+    device = torch.device(args.device)
     f.train()
     for g in g_list:
         g.train()
@@ -56,6 +58,11 @@ def train_one_epoch(
             for position, velocity, boxdim in iter_frames(
                 sim_position, sim_velocity, sim_boxdim
             ):
+            
+                position.to(device)
+                velocity.to(device)
+                boxdim.to(device)
+
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
 
