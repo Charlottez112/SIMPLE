@@ -88,10 +88,13 @@ def evaluate(
                     zip(curr_iter, label_iter)
                 ):
                     # Unpack data.
-                    current_state.to(device)
-                    next_state.to(device)
                     position, velocity, boxdim = current_state
+                    position.to(device)
+                    velocity.to(device)
+                    boxdim.to(device)
+
                     label = torch.concat([next_state[0], next_state[1]], dim=2)
+                    label.to(device)
 
                     # Compute the next state prediction.
                     # On the first step, the initial position, velocity, and boxdim are input.
