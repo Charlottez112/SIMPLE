@@ -9,20 +9,20 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 
-from .model import StatePredictor, TemperaturePredictor
-from .data import SimulationDataLoader
-from .train import train_one_epoch
-from .eval import evaluate
+from simple.model import StatePredictor, TemperaturePredictor
+from simple.data import SimulationDataLoader
+from simple.train import train_one_epoch
+from simple.eval import evaluate
 
 
 def main(args):
     device = torch.device(args.device)
     # Initialize models.
     f = StatePredictor(args.num_neighbors)
-    f.to(device)
+    f = f.to(device)
     g_list: list[nn.Module] = [TemperaturePredictor()]
     for g in g_list:
-        g.to(device)
+        g = g.to(device)
 
     current_date = datetime.date.today()
     os.makedirs('./Log', exist_ok=True)
@@ -62,7 +62,6 @@ def main(args):
     torch.save(f.state_dict(), f'./Saved Models/f_{current_date}')
     for g in g_list:
         torch.save(g.state_dict(), f'./Saved Models/{g}_{current_date}')
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

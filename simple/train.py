@@ -58,10 +58,10 @@ def train_one_epoch(
             for position, velocity, boxdim in iter_frames(
                 sim_position, sim_velocity, sim_boxdim
             ):
-            
-                position.to(device)
-                velocity.to(device)
-                boxdim.to(device)
+
+                position = position.to(device)
+                velocity = velocity.to(device)
+                boxdim = boxdim.to(device)
 
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
@@ -85,7 +85,12 @@ def train_one_epoch(
             for current_state, next_state in zip(curr_iter, label_iter):
                 # Unpack data.
                 position, velocity, boxdim = current_state
+                position = position.to(device)
+                velocity = velocity.to(device)
+                boxdim = boxdim.to(device)
+
                 label = torch.concat([next_state[0], next_state[1]], dim=2)
+                label = label.to(device)
 
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)

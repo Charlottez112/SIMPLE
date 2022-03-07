@@ -31,7 +31,7 @@ class SimulationDataset(Dataset):
            ``'test'``, ``'eval'``
         """
         self.data = []
-        for file in glob.glob(f"Dataset/{split}"):
+        for file in glob.glob(f"Dataset/{split}/*"):
             self.data.append(file)
 
     def __len__(self):

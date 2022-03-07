@@ -59,9 +59,9 @@ def evaluate(
                 sim_position, sim_velocity, sim_boxdim
             ):  
 
-                position.to(device)
-                velocity.to(device)
-                boxdim.to(device)
+                position = position.to(device)
+                velocity = velocity.to(device)
+                boxdim = boxdim.to(device)
 
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
@@ -89,12 +89,12 @@ def evaluate(
                 ):
                     # Unpack data.
                     position, velocity, boxdim = current_state
-                    position.to(device)
-                    velocity.to(device)
-                    boxdim.to(device)
+                    position = position.to(device)
+                    velocity = velocity.to(device)
+                    boxdim = boxdim.to(device)
 
                     label = torch.concat([next_state[0], next_state[1]], dim=2)
-                    label.to(device)
+                    label = label.to(device)
 
                     # Compute the next state prediction.
                     # On the first step, the initial position, velocity, and boxdim are input.
