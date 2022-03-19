@@ -10,7 +10,7 @@ def task_loss(pred: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
         pred (Tensor): Prediction of the next state. Shape: [B, N, 6].
         label (Tensor): Ground truth next state. Shape: [B, N, 6].
     """
-    return torch.mean(torch.square(pred - label))
+    return torch.mean(torch.square(pred - label)), torch.mean(torch.square(pred[:,:,:3] - label[:,:,:3])), torch.mean(torch.square(pred[:,:,3:] - label[:,:,3:]))
 
 
 def noether_loss_exact(quantities: list[torch.Tensor]) -> torch.Tensor:
