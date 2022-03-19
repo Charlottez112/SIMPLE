@@ -113,7 +113,8 @@ def evaluate(
                         state_preds[-1] = prev_state_pred.cpu()
 
                     # Compute and save task loss.
-                    task_losses.append(task_loss(next_state_pred, label).cpu().detach())
+                    task_loss_total, task_loss_pos, task_loss_vel =task_loss(next_state_pred, label)
+                    task_losses.append(task_loss_total.cpu().detach())
 
                     # Save prediction. This is left in CUDA memory for the next frame prediction.
                     state_preds.append(next_state_pred.detach())
