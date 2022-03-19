@@ -61,9 +61,9 @@ def main(args):
     writer.close()
 
     os.makedirs('./Saved Models', exist_ok=True)
-    torch.save(f.state_dict(), f'./Saved Models/f_{current_date}')
+    torch.save(f.state_dict(), f'./Saved_Models/f_{current_date}')
     for g in g_list:
-        torch.save(g.state_dict(), f'./Saved Models/{g}_{current_date}')
+        torch.save(g.state_dict(), f'./Saved_Models/{g}_{current_date}')
 
 
 if __name__ == "__main__":
