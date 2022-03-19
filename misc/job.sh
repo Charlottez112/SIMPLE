@@ -3,7 +3,7 @@
 #SBATCH --job-name=simple-training
 #SBATCH --account=eecs545s002w22_class
 #SBATCH --partition=gpu
-#SBATCH --time=00-10:00:00
+#SBATCH --time=00-00:10:00
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=8
@@ -24,4 +24,7 @@ python main.py \
     --num_workers 1 \
     --num_neighbors 10 \
     --conserve_quantity 'approx' \
-    --device 'cuda'
+    --device 'cuda' \
+    --activation 'Sigmoid' \
+    --activation_noether 'Sigmoid' \
+    --embedding_dim 4

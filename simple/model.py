@@ -17,7 +17,7 @@ class StatePredictor(nn.Module):
     by a feed-forward neural network.
     """
 
-    def __init__(self, num_neighbors: int = 10) -> None:
+    def __init__(self, activation, num_neighbors: int = 10) -> None:
         """Intialize the model.
 
         Args:
@@ -34,12 +34,14 @@ class StatePredictor(nn.Module):
         # - The dimension of the box
         len_input = 3 * (num_neighbors + 1) + 3 * num_neighbors + 1
 
+        activation_functions = {'ReLU': nn.ReLU(), 'Sigmoid': nn.Sigmoid()}
+
         # Three-layer feed forward network as the next state predictor.
         self.layers = nn.Sequential(
             nn.Linear(len_input, 32),
-            nn.ReLU(),
+            activation_functions[activation],
             nn.Linear(32, 16),
-            nn.ReLU(),
+            activation_functions[activation],
             nn.Linear(16, 6),
         )
 
@@ -112,7 +114,7 @@ class StatePredictor(nn.Module):
 class LearnedQuantityPredictor(nn.Module):
     """Model that predicts the quantity to be conserved."""
 
-    def __init__(self, embedding_dim: int = 8, num_particles: int = 4096) -> None:
+    def __init__(self, activation_noether, embedding_dim: int = 8, num_particles: int = 4096) -> None:
         """Intialize the model.
 
         Args:
@@ -129,12 +131,13 @@ class LearnedQuantityPredictor(nn.Module):
         # - Position offset vectors of all particles
         len_input = num_particles * 6
 
+        activation_functions = {'ReLU': nn.ReLU(), 'Sigmoid': nn.Sigmoid()}
         # Three-layer feed forward network as the quantity predictor.
         self.layers = nn.Sequential(
             nn.Linear(len_input, 128),
-            nn.ReLU(),
+            activation_functions[activation_noether],
             nn.Linear(128, 32),
-            nn.ReLU(),
+            activation_functions[activation_noether],
             nn.Linear(32, embedding_dim),
         )
 
