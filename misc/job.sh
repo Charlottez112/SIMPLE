@@ -3,7 +3,7 @@
 #SBATCH --job-name=simple-training
 #SBATCH --account=eecs545s002w22_class
 #SBATCH --partition=gpu
-#SBATCH --time=00-00:10:00
+#SBATCH --time=00-00:30:00
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=8
@@ -17,7 +17,7 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate noether
 
 python main.py \
-    --num_epochs 10 \
+    --num_epochs 1 \
     --batch_size 4 \
     --outer_lr 1e-3 \
     --inner_lr 1e-3 \
