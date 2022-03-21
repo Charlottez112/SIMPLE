@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import datetime
 import os
 
@@ -60,10 +61,14 @@ def main(args):
         writer.flush()
     writer.close()
 
-    os.makedirs('./Saved_Models', exist_ok=True)
-    torch.save(f.state_dict(), f'./Saved_Models/{type(f).__name__}_{current_date}')
+    os.makedirs(f'./Saved_Models/{current_date}', exist_ok=True)
+    torch.save(f.state_dict(), f'./Saved_Models/{current_date}/{f}')
     for g in g_list:
-        torch.save(g.state_dict(), f'./Saved_Models/{type(g).__name__}_{current_date}')
+        torch.save(g.state_dict(), f'./Saved_Models/{current_date}/{g}')
+    
+    # Save hyperparameters along with the model
+    with open(f'./Saved_Models/{current_date}/hyperparameters.json', 'wt') as f:
+        json.dump(vars(args), f, indent=4)
 
 
 if __name__ == "__main__":
