@@ -59,9 +59,9 @@ def evaluate(
                 sim_position, sim_velocity, sim_boxdim
             ):  
 
-                position.to(device)
-                velocity.to(device)
-                boxdim.to(device)
+                position = position.to(device)
+                velocity = velocity.to(device)
+                boxdim = boxdim.to(device)
 
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
@@ -89,12 +89,12 @@ def evaluate(
                 ):
                     # Unpack data.
                     position, velocity, boxdim = current_state
-                    position.to(device)
-                    velocity.to(device)
-                    boxdim.to(device)
+                    position = position.to(device)
+                    velocity = velocity.to(device)
+                    boxdim = boxdim.to(device)
 
                     label = torch.concat([next_state[0], next_state[1]], dim=2)
-                    label.to(device)
+                    label = label.to(device)
 
                     # Compute the next state prediction.
                     # On the first step, the initial position, velocity, and boxdim are input.
@@ -113,7 +113,8 @@ def evaluate(
                         state_preds[-1] = prev_state_pred.cpu()
 
                     # Compute and save task loss.
-                    task_losses.append(task_loss(next_state_pred, label).cpu().detach())
+                    task_loss_total, task_loss_pos, task_loss_vel =task_loss(next_state_pred, label)
+                    task_losses.append(task_loss_total.cpu().detach())
 
                     # Save prediction. This is left in CUDA memory for the next frame prediction.
                     state_preds.append(next_state_pred.detach())

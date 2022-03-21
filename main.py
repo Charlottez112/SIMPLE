@@ -9,18 +9,20 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 
-from .model import StatePredictor, TemperaturePredictor
-from .data import SimulationDataLoader
-from .train import train_one_epoch
-from .eval import evaluate
+from simple.model import StatePredictor, LearnedQuantityPredictor, TemperaturePredictor
+from simple.data import SimulationDataLoader
+from simple.train import train_one_epoch
+from simple.eval import evaluate
 
 
 def main(args):
     device = torch.device(args.device)
     # Initialize models.
-    f = StatePredictor(args.num_neighbors)
+    f = StatePredictor(args.activation, args.num_neighbors)
     f.to(device)
-    g_list: list[nn.Module] = [TemperaturePredictor()]
+    g_list: list[nn.Module] = [LearnedQuantityPredictor(args.activation_noether,
+                                                        args.embedding_dim),
+                               TemperaturePredictor()]
     for g in g_list:
         g.to(device)
 
@@ -57,11 +59,11 @@ def main(args):
         writer.add_scalar('Val_error', validation_error, epoch)
         writer.flush()
     writer.close()
-    
-    os.makedirs('./Saved Models', exist_ok=True)
-    torch.save(f.state_dict(), f'./Saved Models/f_{current_date}')
+
+    os.makedirs('./Saved_Models', exist_ok=True)
+    torch.save(f.state_dict(), f'./Saved_Models/{type(f).__name__}_{current_date}')
     for g in g_list:
-        torch.save(g.state_dict(), f'./Saved Models/{g}_{current_date}')
+        torch.save(g.state_dict(), f'./Saved_Models/{type(g).__name__}_{current_date}')
 
 
 if __name__ == "__main__":
@@ -75,7 +77,9 @@ if __name__ == "__main__":
     parser.add_argument('--num_neighbors', default=10, type=int, help='number of neighbors')
     parser.add_argument('--conserve_quantity', default='approx', choices=['approx', 'exact'], type=str, help='conserved quantity')
     parser.add_argument('--device', default='cuda', choices=['cuda', 'cpu'], type=str, help='cuda or cpu')
-    
+    parser.add_argument('--activation', default='ReLU', choices=['ReLU', 'Sigmoid'], type=str, help='activation function')
+    parser.add_argument('--activation_noether', default='ReLU', choices=['ReLU', 'Sigmoid'], type=str, help='noether activation function')
+    parser.add_argument('--embedding_dim', default=8, type=int, help='dimension of the Noether embedding')
     args = parser.parse_args()
 
     main(args)

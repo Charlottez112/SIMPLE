@@ -58,10 +58,10 @@ def train_one_epoch(
             for position, velocity, boxdim in iter_frames(
                 sim_position, sim_velocity, sim_boxdim
             ):
-            
-                position.to(device)
-                velocity.to(device)
-                boxdim.to(device)
+
+                position = position.to(device)
+                velocity = velocity.to(device)
+                boxdim = boxdim.to(device)
 
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
@@ -80,21 +80,38 @@ def train_one_epoch(
 
             # Iterate through timesteps again to compute task losses.
             task_losses = []
+            task_losses_pos = []
+            task_losses_vel = []
             curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
             label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
             for current_state, next_state in zip(curr_iter, label_iter):
                 # Unpack data.
                 position, velocity, boxdim = current_state
+                position = position.to(device)
+                velocity = velocity.to(device)
+                boxdim = boxdim.to(device)
+
                 label = torch.concat([next_state[0], next_state[1]], dim=2)
+                label = label.to(device)
 
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
-                task_losses.append(task_loss(next_state_pred, label))
+                task_loss_total, task_loss_pos, task_loss_vel =task_loss(next_state_pred, label)
+                writer.add_scalar('Loss/task/position_step', task_loss_pos)
+                writer.add_scalar('Loss/task/velocity_step', task_loss_vel)
+                task_losses.append(task_loss_total)
+                task_losses_pos.append(task_loss_pos)
+                task_losses_vel.append(task_loss_vel)
 
             # Compute the outer loop gradients (including Hessians).
             mean_loss = torch.stack(task_losses).mean()
             mean_loss.backward()
-            writer.add_scalar('Loss/task', mean_loss.item(), epoch)
+            writer.add_scalar('Loss/task/total_mean', mean_loss.item(), epoch)
+            
+            mean_pos_loss = torch.stack(task_losses_pos).mean()
+            mean_vel_loss = torch.stack(task_losses_vel).mean()
+            writer.add_scalar('Loss/task/position_mean', mean_pos_loss.item(), epoch)
+            writer.add_scalar('Loss/task/velocity_mean',mean_vel_loss.item(), epoch)
             writer.flush()
 
         # Update the state predictor and the quantity predictos.
