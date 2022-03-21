@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import datetime
+import time
 import os
 
 import torch
@@ -27,9 +27,9 @@ def main(args):
     for g in g_list:
         g.to(device)
 
-    current_date = datetime.date.today()
+    current_time = time.strftime("%Y-%m-%d-%H-%M-%S")
     os.makedirs('./Log', exist_ok=True)
-    writer = SummaryWriter(f'./Log/{current_date}')
+    writer = SummaryWriter(f'./Log/{current_time}')
 
     # Initialize data loaders.
     train_loader = SimulationDataLoader(
@@ -61,13 +61,13 @@ def main(args):
         writer.flush()
     writer.close()
 
-    os.makedirs(f'./Saved_Models/{current_date}', exist_ok=True)
-    torch.save(f.state_dict(), f'./Saved_Models/{current_date}/{f}')
+    os.makedirs(f'./Saved_Models/{current_time}', exist_ok=True)
+    torch.save(f.state_dict(), f'./Saved_Models/{current_time}/{f}')
     for g in g_list:
-        torch.save(g.state_dict(), f'./Saved_Models/{current_date}/{g}')
+        torch.save(g.state_dict(), f'./Saved_Models/{current_time}/{g}')
     
     # Save hyperparameters along with the model
-    with open(f'./Saved_Models/{current_date}/hyperparameters.json', 'wt') as f:
+    with open(f'./Saved_Models/{current_time}/hyperparameters.json', 'wt') as f:
         json.dump(vars(args), f, indent=4)
 
 
