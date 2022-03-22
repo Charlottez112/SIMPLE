@@ -80,68 +80,43 @@ class StatePredictor(nn.Module):
         # Delete pairwise distnace tensor since it's no longer needed.
         del distances
 
-        # Gather nearest neighbor positions for each particle.
-        # Shape: [B, N, k, 3]
-        expanded_idx = nn_indices.unsqueeze(3).repeat(1, 1, 1, 3)
-        no_self_idx = expanded_idx[:, :, 1:, :]
-        position_nn = position.unsqueeze(1).repeat(1, N, 1, 1).gather(2, no_self_idx)
-        # Offset only the position vector.
-        position_nn_offset = position_nn - position.unsqueeze(2)  # [B, N, k, 3]
-
         # Gather nearest neighbor velocities for each particle.
         # Shape: [B, N, k+1, 3]
-        if self.predict_velocity_diff is True:
-            velocity_nn = velocity.unsqueeze(1).repeat(1, N, 1, 1).gather(2, no_self_idx)
-        else:
-            velocity_nn = velocity.unsqueeze(1).repeat(1, N, 1, 1).gather(2, expanded_idx)
+        expanded_idx = nn_indices.unsqueeze(3).repeat(1, 1, 1, 3)
+        velocity_nn = velocity.unsqueeze(1).repeat(1, N, 1, 1).gather(2, expanded_idx)
+
+        # Gather nearest neighbor positions for each particle.
+        # Shape: [B, N, k, 3]
+        no_self_idx = expanded_idx[:, :, 1:, :]
+        position_nn = position.unsqueeze(1).repeat(1, N, 1, 1).gather(2, no_self_idx)
 
         # Delete index matrices since they're no longer needed.
         del no_self_idx, expanded_idx, nn_indices
 
+        # Offset only the position vector.
+        position_nn_offset = position_nn - position.unsqueeze(2)  # [B, N, k, 3]
+
+        # Concatenate velocity, position, and boxdim vectors.
+        # Shape: [B, N, 3*(k+1)+3*k+1]
+        current_state = torch.concat(
+            [
+                velocity_nn.view(B, N, 3 * (k + 1)),
+                position_nn_offset.view(B, N, 3 * k),
+                boxdim.unsqueeze(1).unsqueeze(2).repeat(1, N, 1),
+            ],
+            dim=2,
+        )
+        # Shape: [B*N, 3*(k+1)+3*k+1]
+        flattened_current_state = current_state.reshape(B * N, 6 * k + 3 + 1)
+
+        # Run through neural network.
+        pred = self.layers(flattened_current_state)  # [B*N, 6]
+        unflattened_pred = pred.reshape(B, N, 6)  # [B, N, 6]
+
+        # Apply delta to position. This is our predicted next state.
+        unflattened_pred[:, :, :3] += position
         if self.predict_velocity_diff is True:
-            # Offset velocity
-            velocity_nn_offset = velocity_nn - velocity.unsqueeze(2)  # [B, N, k, 3]
-            # Concatenate velocity, position, and boxdim vectors.
-            # Shape: [B, N, 3*(k+1)+3*k+1]
-            current_state = torch.concat(
-                [
-                    velocity_nn_offset.view(B, N, 3 * k),
-                    position_nn_offset.view(B, N, 3 * k),
-                    boxdim.unsqueeze(1).unsqueeze(2).repeat(1, N, 1),
-                ],
-                dim=2,
-            )
-            # Shape: [B*N, 3*k+3*k+1]
-            flattened_current_state = current_state.reshape(B * N, 6 * k + 1)
-
-            # Run through neural network.
-            pred = self.layers(flattened_current_state)  # [B*N, 6]
-            unflattened_pred = pred.reshape(B, N, 6)  # [B, N, 6]
-
-            # Apply delta to position. This is our predicted next state.
-            unflattened_pred[:, :, :3] += position
             unflattened_pred[:, :, 3:] += velocity
-
-        else:
-            # Concatenate velocity, position, and boxdim vectors.
-            # Shape: [B, N, 3*(k+1)+3*k+1]
-            current_state = torch.concat(
-                [
-                    velocity_nn.view(B, N, 3 * (k + 1)),
-                    position_nn_offset.view(B, N, 3 * k),
-                    boxdim.unsqueeze(1).unsqueeze(2).repeat(1, N, 1),
-                ],
-                dim=2,
-            )
-            # Shape: [B*N, 3*(k+1)+3*k+1]
-            flattened_current_state = current_state.reshape(B * N, 6 * k + 3 + 1)
-
-            # Run through neural network.
-            pred = self.layers(flattened_current_state)  # [B*N, 6]
-            unflattened_pred = pred.reshape(B, N, 6)  # [B, N, 6]
-
-            # Apply delta to position. This is our predicted next state.
-            unflattened_pred[:, :, :3] += position
 
         return unflattened_pred
 
