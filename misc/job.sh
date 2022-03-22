@@ -22,6 +22,7 @@ python main.py \
     --outer_lr 1e-3 \
     --inner_lr 1e-3 \
     --num_workers 1 \
+    --predict_velocity_diff \
     --num_neighbors 10 \
     --conserve_quantity 'approx' \
     --device 'cuda' \

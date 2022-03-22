@@ -19,7 +19,7 @@ from simple.eval import evaluate
 def main(args):
     device = torch.device(args.device)
     # Initialize models.
-    f = StatePredictor(args.activation, args.num_neighbors)
+    f = StatePredictor(args.activation, args.predict_velocity_diff, args.num_neighbors)
     f.to(device)
     g_list: list[nn.Module] = [LearnedQuantityPredictor(args.activation_noether,
                                                         args.embedding_dim),
@@ -65,7 +65,7 @@ def main(args):
     torch.save(f.state_dict(), f'./Saved_Models/{current_time}/{f}')
     for g in g_list:
         torch.save(g.state_dict(), f'./Saved_Models/{current_time}/{g}')
-    
+
     # Save hyperparameters along with the model
     with open(f'./Saved_Models/{current_time}/hyperparameters.json', 'wt') as f:
         json.dump(vars(args), f, indent=4)
@@ -79,6 +79,7 @@ if __name__ == "__main__":
     parser.add_argument('--outer_lr', default=1e-4, type=float, help='learning rate for outer loop')
     parser.add_argument('--inner_lr', default=1e-4, type=float, help='learning rate for inner loop')
     parser.add_argument('--num_workers', default=1, type=int, help='num_workers in Dataloader') 
+    parser.add_argument('--predict_velocity_diff', help='whether to predict change in velocity', action='store_true')
     parser.add_argument('--num_neighbors', default=10, type=int, help='number of neighbors')
     parser.add_argument('--conserve_quantity', default='approx', choices=['approx', 'exact'], type=str, help='conserved quantity')
     parser.add_argument('--device', default='cuda', choices=['cuda', 'cpu'], type=str, help='cuda or cpu')
