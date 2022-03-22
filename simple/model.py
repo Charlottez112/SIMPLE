@@ -27,6 +27,7 @@ class StatePredictor(nn.Module):
         super().__init__()
 
         self.num_neighbors = num_neighbors
+        self.activation = activation
 
         # Input components concatenated for one timestep:
         # - Velocity vectors of k nearest neighbors and self
@@ -39,11 +40,14 @@ class StatePredictor(nn.Module):
         # Three-layer feed forward network as the next state predictor.
         self.layers = nn.Sequential(
             nn.Linear(len_input, 32),
-            activation_functions[activation],
+            activation_functions[self.activation],
             nn.Linear(32, 16),
-            activation_functions[activation],
+            activation_functions[self.activation],
             nn.Linear(16, 6),
         )
+
+    def __str__(self) -> str:
+        return f'{type(self).__name__}_{self.activation}_neighbor_{self.num_neighbors}'
 
     def forward(
         self,
@@ -125,6 +129,7 @@ class LearnedQuantityPredictor(nn.Module):
 
         self.embedding_dim = embedding_dim
         self.num_particles = num_particles
+        self.activation = activation_noether
 
         # Input components concatenated:
         # - Velocity vectors of all particles
@@ -135,11 +140,14 @@ class LearnedQuantityPredictor(nn.Module):
         # Three-layer feed forward network as the quantity predictor.
         self.layers = nn.Sequential(
             nn.Linear(len_input, 128),
-            activation_functions[activation_noether],
+            activation_functions[self.activation],
             nn.Linear(128, 32),
-            activation_functions[activation_noether],
+            activation_functions[self.activation],
             nn.Linear(32, embedding_dim),
         )
+
+    def __str__(self) -> str:
+        return f'{type(self).__name__}_{self.activation}_edim_{self.embedding_dim}'
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:  # [B, N, 6]
         """Predict the conserved quantity."""
@@ -157,6 +165,9 @@ class TemperaturePredictor(nn.Module):
     The actual temperature cannot be computed since we don't have access to
     the mass of each particle.
     """
+
+    def __str__(self) -> str:
+        return type(self).__name__
 
     def forward(
         self,
