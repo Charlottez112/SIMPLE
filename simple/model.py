@@ -36,8 +36,6 @@ class StatePredictor(nn.Module):
         # - Position offset vectors of k nearest neighbors
         # - The dimension of the box
         len_input = 3 * (num_neighbors + 1) + 3 * num_neighbors + 1
-        if self.predict_velocity_diff is True:
-            len_input = 3 * num_neighbors + 3 * num_neighbors + 1
 
         activation_functions = {'ReLU': nn.ReLU(), 'Sigmoid': nn.Sigmoid()}
 
