@@ -52,12 +52,15 @@ def main(args):
     outer_optimizer = torch.optim.Adam(params=outer_params, lr=args.outer_lr)
 
     # Run training.
+    steps = 0
     for epoch in range(args.num_epochs):
         print(f"Epoch {epoch}")
-        train_one_epoch(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
-        validation_error = evaluate(f, g_list, eval_loader, args)
-        print(f"validation error: {validation_error}")
-        writer.add_scalar('Val_error', validation_error, epoch)
+        train_one_epoch(f, g_list, train_loader, outer_optimizer, epoch, steps, writer, args)
+        val_error_total, val_error_pos, val_error_vel = evaluate(f, g_list, eval_loader, args)
+        print(f"validation error: {val_error_total}")
+        writer.add_scalar('Val_error/total', val_error_total, epoch)
+        writer.add_scalar('Val_error/position', val_error_pos, epoch)
+        writer.add_scalar('Val_error/velocity', val_error_vel, epoch)
         writer.flush()
     writer.close()
 
