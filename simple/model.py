@@ -17,7 +17,8 @@ class StatePredictor(nn.Module):
     by a feed-forward neural network.
     """
 
-    def __init__(self, activation, num_neighbors: int = 10) -> None:
+    def __init__(self, activation, predict_velocity_diff: bool = False,
+                 num_neighbors: int = 10) -> None:
         """Intialize the model.
 
         Args:
@@ -28,6 +29,7 @@ class StatePredictor(nn.Module):
 
         self.num_neighbors = num_neighbors
         self.activation = activation
+        self.predict_velocity_diff = predict_velocity_diff
 
         # Input components concatenated for one timestep:
         # - Velocity vectors of k nearest neighbors and self
@@ -111,6 +113,8 @@ class StatePredictor(nn.Module):
 
         # Apply delta to position. This is our predicted next state.
         unflattened_pred[:, :, :3] += position
+        if self.predict_velocity_diff is True:
+            unflattened_pred[:, :, 3:] += velocity
 
         return unflattened_pred
 
