@@ -36,6 +36,8 @@ def evaluate(
     # Saves all task losses and predicted states.
     task_losses = []
     state_preds = []
+    position_losses = []
+    velocity_losses = []
     for i, data in enumerate(loader):
         print(f"Batch {i}")
 
@@ -115,6 +117,8 @@ def evaluate(
                     # Compute and save task loss.
                     task_loss_total, task_loss_pos, task_loss_vel =task_loss(next_state_pred, label)
                     task_losses.append(task_loss_total.cpu().detach())
+                    position_losses.append(task_loss_pos.cpu().detach())
+                    velocity_losses.append(task_loss_pos.cpu().detach())
 
                     # Save prediction. This is left in CUDA memory for the next frame prediction.
                     state_preds.append(next_state_pred.detach())
@@ -122,4 +126,4 @@ def evaluate(
                 # Send the second-to-last frame's next frame prediction to CPU.
                 state_preds[-1] = state_preds[-1].cpu()
 
-    return sum(task_losses) / len(task_losses)
+    return sum(task_losses) / len(task_losses), sum(position_losses) / len(position_losses), sum(velocity_losses) / len(velocity_losses)
