@@ -15,6 +15,7 @@ def evaluate(
     f: nn.Module,
     g_list: list[nn.Module],
     loader: DataLoader,
+    writer: torch.utils.tensorboard.SummaryWriter,
     args: argparse.Namespace,
 ) -> float:
     """Evaluate the given model."""
@@ -39,6 +40,7 @@ def evaluate(
     position_losses = []
     velocity_losses = []
     for i, data in enumerate(loader):
+        step_counter = 0
         print(f"Batch {i}")
 
         # Unpack data.
@@ -116,14 +118,22 @@ def evaluate(
 
                     # Compute and save task loss.
                     task_loss_total, task_loss_pos, task_loss_vel =task_loss(next_state_pred, label)
+                    task_loss_pos = task_loss_pos.cpu().detach()
+                    task_loss_vel = task_loss_vel.cpu().detach()
+                    
+                    writer.add_scalar(f'Loss/Val/batch_{i}/position_step', task_loss_pos, step_counter)
+                    writer.add_scalar(f'Loss/Val/batch_{i}/velocity_step', task_loss_vel, step_counter)
+                    step_counter += 1
+                    
                     task_losses.append(task_loss_total.cpu().detach())
-                    position_losses.append(task_loss_pos.cpu().detach())
-                    velocity_losses.append(task_loss_pos.cpu().detach())
+                    position_losses.append(task_loss_pos)
+                    velocity_losses.append(task_loss_vel)
 
                     # Save prediction. This is left in CUDA memory for the next frame prediction.
                     state_preds.append(next_state_pred.detach())
 
                 # Send the second-to-last frame's next frame prediction to CPU.
                 state_preds[-1] = state_preds[-1].cpu()
+                writer.flush()
 
     return sum(task_losses) / len(task_losses), sum(position_losses) / len(position_losses), sum(velocity_losses) / len(velocity_losses)
