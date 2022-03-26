@@ -11,6 +11,99 @@ from .loss import task_loss, noether_loss_approx, noether_loss_exact
 from .util import iter_frames
 
 
+def train_baseline_one_epoch(
+    f: nn.Module,
+    g_list: list[nn.Module],
+    loader: DataLoader,
+    optimizer: torch.optim.Optimizer,
+    epoch: int,
+    writer: torch.utils.tensorboard.SummaryWriter,
+    args: argparse.Namespace,
+) -> None:
+    """Train the baseline model for one epoch."""
+    # Select Noether loss function.
+    if args.conserve_quantity == "approx":
+        noether_loss_func = noether_loss_approx
+    elif args.conserve_quantity == "exact":
+        noether_loss_func = noether_loss_exact
+    else:
+        raise ValueError("--conserve-quantity must be 'approx' or 'exact'.")
+
+    # Training device.
+    device = torch.device(args.device)
+
+    # Set models to the right mode.
+    f.train()
+    for g in g_list:
+        g.eval()
+
+    # Train.
+    for i, data in enumerate(loader):
+        print(f"Batch {i}")
+
+        # Unpack data.
+        sim_position: torch.Tensor = data["position"]  # [B, F, N, 3]
+        sim_velocity: torch.Tensor = data["velocity"]  # [B, F, N, 3]
+        # sim_temperature: torch.Tensor = data["temperature"]  # [B, F]
+        sim_boxdim: torch.Tensor = data["boxdim"]  # [B, F]
+
+        # Iterate through timesteps and predict the next state.
+        task_losses = []
+        task_losses_pos = []
+        task_losses_vel = []
+        noether_embeddings = []
+        curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
+        label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
+        for current_state, next_state in zip(curr_iter, label_iter):
+            # Unpack data.
+            position, velocity, boxdim = current_state
+            position = position.to(device)
+            velocity = velocity.to(device)
+            boxdim = boxdim.to(device)
+
+            label = torch.concat([next_state[0], next_state[1]], dim=2)
+            label = label.to(device)
+
+            # Compute the next state prediction.
+            next_state_pred = f(position, velocity, boxdim)
+            task_loss_total, task_loss_pos, task_loss_vel = task_loss(next_state_pred, label)
+            writer.add_scalar('Loss/task/position_step', task_loss_pos)
+            writer.add_scalar('Loss/task/velocity_step', task_loss_vel)
+            task_losses.append(task_loss_total)
+            task_losses_pos.append(task_loss_pos)
+            task_losses_vel.append(task_loss_vel)
+
+            # Run through all quantity predictors to compute Noether embeddings.
+            # NOTE: All quantity predictor modules must return tensors of shape [B, e].
+            with torch.no_grad():
+                noether_embedding = torch.concat(
+                    [g(next_state_pred) for g in g_list], dim=1
+                )
+                noether_embeddings.append(noether_embedding)
+
+        # Compute the Noether loss.
+        with torch.no_grad():
+            noether_loss = noether_loss_func(noether_embeddings)
+            writer.add_scalar('Loss/neother', noether_loss.item(), epoch)
+
+        # Compute the task loss and gradients.
+        mean_loss = torch.stack(task_losses).mean()
+        mean_loss.backward()
+        writer.add_scalar('Loss/task/total_mean', mean_loss.item(), epoch)
+        
+        mean_pos_loss = torch.stack(task_losses_pos).mean()
+        mean_vel_loss = torch.stack(task_losses_vel).mean()
+        writer.add_scalar('Loss/task/position_mean', mean_pos_loss.item(), epoch)
+        writer.add_scalar('Loss/task/velocity_mean',mean_vel_loss.item(), epoch)
+        writer.flush()
+
+        # Update the state predictor.
+        optimizer.step()
+        
+        # Reset gradients.
+        optimizer.zero_grad(set_to_none=True)
+
+
 def train_one_epoch(
     f: nn.Module,
     g_list: list[nn.Module],
@@ -19,7 +112,7 @@ def train_one_epoch(
     epoch: int,
     writer: torch.utils.tensorboard.SummaryWriter,
     args: argparse.Namespace,
-):  
+) -> None:  
     """Train the model for one epoch."""
     # Select Noether loss function.
     if args.conserve_quantity == "approx":

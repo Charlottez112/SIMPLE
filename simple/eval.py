@@ -11,6 +11,91 @@ from .loss import task_loss, noether_loss_approx, noether_loss_exact
 from .util import iter_frames
 
 
+@torch.no_grad()
+def evaluate_baseline(
+    f: nn.Module,
+    g_list: list[nn.Module],
+    loader: DataLoader,
+    args: argparse.Namespace,
+) -> float:
+    """Evaluate the baseline model."""
+    # Select Noether loss function.
+    if args.conserve_quantity == "approx":
+        noether_loss_func = noether_loss_approx
+    elif args.conserve_quantity == "exact":
+        noether_loss_func = noether_loss_exact
+    else:
+        raise ValueError("--conserve-quantity must be 'approx' or 'exact'.")
+
+    # Eval device.
+    device = torch.device(args.device)
+
+    # Set models to evaluation mode.
+    f.eval()
+    for g in g_list:
+        g.eval()
+
+    # Evaluate.
+    # Saves all task losses and predicted states.
+    task_losses = []
+    state_preds = []
+    for i, data in enumerate(loader):
+        print(f"Batch {i}")
+
+        # Unpack data.
+        sim_position: torch.Tensor = data["position"]  # [B, F, N, 3]
+        sim_velocity: torch.Tensor = data["velocity"]  # [B, F, N, 3]
+        # sim_temperature: torch.Tensor = data["temperature"]  # [B, F]
+        sim_boxdim: torch.Tensor = data["boxdim"]  # [B, F]
+
+        # Iterate through timesteps to compute task losses.
+        # Note that we do not perform inference on the last frame because there is
+        # no ground truth state for it's next state.
+        curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
+        label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
+        for i, (current_state, next_state) in enumerate(
+            zip(curr_iter, label_iter)
+        ):
+            # Unpack data.
+            position, velocity, boxdim = current_state
+            position = position.to(device)
+            velocity = velocity.to(device)
+            boxdim = boxdim.to(device)
+
+            label = torch.concat([next_state[0], next_state[1]], dim=2)
+            label = label.to(device)
+
+            # Compute the next state prediction.
+            # On the first step, the initial position, velocity, and boxdim are input.
+            # On all subsequent steps, the previous step's position and velocity preds,
+            # plus the current timestep's boxdim (from the user) are input.
+            if i == 0:
+                next_state_pred = f(position, velocity, boxdim)
+            else:
+                prev_state_pred = state_preds[-1]
+                next_state_pred = f(
+                    prev_state_pred[:, :, 0:3],
+                    prev_state_pred[:, :, 3:6],
+                    boxdim,
+                )
+                # No need to keep it in CUDA now we're done with it.
+                state_preds[-1] = prev_state_pred.cpu()
+
+            # Compute and save task loss.
+            task_loss_total, task_loss_pos, task_loss_vel = task_loss(next_state_pred, label)
+            task_losses.append(task_loss_total.cpu().detach())
+
+            # Save prediction. This is left in CUDA memory for the next frame prediction.
+            state_preds.append(next_state_pred.detach())
+
+        # Send the second-to-last frame's next frame prediction to CPU.
+        state_preds[-1] = state_preds[-1].cpu()
+
+    return sum(task_losses) / len(task_losses)
+
+
+
+
 def evaluate(
     f: nn.Module,
     g_list: list[nn.Module],
