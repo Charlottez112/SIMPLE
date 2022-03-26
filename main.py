@@ -21,6 +21,7 @@ def main(args):
     # Initialize models.
     f = StatePredictor(args.activation, args.predict_velocity_diff, args.num_neighbors)
     f.to(device)
+    # TODO: Make this an argument via argparse.
     g_list: list[nn.Module] = [LearnedQuantityPredictor(args.activation_noether,
                                                         args.embedding_dim),
                                TemperaturePredictor()]
@@ -50,6 +51,8 @@ def main(args):
         # For the baseline, this is the only optimizer. Also, it is assumed that
         # only the TemperaturePredictor will be used as the g network.
         outer_optimizer = torch.optim.Adam(params=f.parameters(), lr=args.outer_lr)
+        if any(isinstance(g, LearnedQuantityPredictor) for g in g_list):
+            raise ValueError("LearnedQuantityPredictor is useless for the baseline.")
     else:
         outer_params = list(f.parameters())
         for g in g_list:
