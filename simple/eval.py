@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import argparse
 
 import torch
@@ -121,8 +122,13 @@ def evaluate(
     # Saves all task losses and predicted states.
     task_losses = []
     state_preds = []
+    # To track the mean inference latency.
+    latencies = []
     for i, data in enumerate(loader):
         print(f"Batch {i}")
+
+        # Track inference latency.
+        batch_start_time = time.time()
 
         # Unpack data.
         sim_position: torch.Tensor = data["position"]  # [B, F, N, 3]
@@ -206,5 +212,14 @@ def evaluate(
 
                 # Send the second-to-last frame's next frame prediction to CPU.
                 state_preds[-1] = state_preds[-1].cpu()
+
+            # Track inference latency.
+            inference_latency = time.time() - batch_start_time
+            latencies.append(inference_latency)
+            print(f"Inference latency: {inference_latency}")
+
+        # Compute mean inference latency and print.
+        print(f"Mean inference latency: {sum(latencies) / len(latencies)}")
+        print(f"Mean inference latency excluding first batch: {sum(latencies[1:]) / len(latencies[1:])}")
 
     return sum(task_losses) / len(task_losses)
