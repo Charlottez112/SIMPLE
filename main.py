@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from simple.model import StatePredictor, LearnedQuantityPredictor, TemperaturePredictor
 from simple.data import SimulationDataLoader
-from simple.train import train_one_epoch
-from simple.eval import evaluate
+from simple.train import train_baseline_one_epoch, train_one_epoch
+from simple.eval import evaluate_baseline, evaluate
 
 
 def main(args):
@@ -21,6 +21,7 @@ def main(args):
     # Initialize models.
     f = StatePredictor(args.activation, args.predict_velocity_diff, args.num_neighbors)
     f.to(device)
+    # TODO: Make this an argument via argparse.
     g_list: list[nn.Module] = [LearnedQuantityPredictor(args.activation_noether,
                                                         args.embedding_dim),
                                TemperaturePredictor()]
@@ -46,16 +47,26 @@ def main(args):
     )
 
     # Initialize the outer optimizer (the one that backprops from task_loss).
-    outer_params = list(f.parameters())
-    for g in g_list:
-        outer_params.extend(list(g.parameters()))
-    outer_optimizer = torch.optim.Adam(params=outer_params, lr=args.outer_lr)
+    if args.baseline:
+        # For the baseline, this is the only optimizer. Also, it is assumed that
+        # only the TemperaturePredictor will be used as the g network.
+        outer_optimizer = torch.optim.Adam(params=f.parameters(), lr=args.outer_lr)
+        if any(isinstance(g, LearnedQuantityPredictor) for g in g_list):
+            raise ValueError("LearnedQuantityPredictor is useless for the baseline.")
+    else:
+        outer_params = list(f.parameters())
+        for g in g_list:
+            outer_params.extend(list(g.parameters()))
+        outer_optimizer = torch.optim.Adam(params=outer_params, lr=args.outer_lr)
+
+    train_fn = train_baseline_one_epoch if args.baseline else train_one_epoch
+    eval_fn = evaluate_baseline if args.baseline else evaluate
 
     # Run training.
     for epoch in range(args.num_epochs):
         print(f"Epoch {epoch}")
-        train_one_epoch(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
-        validation_error = evaluate(f, g_list, eval_loader, args)
+        train_fn(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
+        validation_error = eval_fn(f, g_list, eval_loader, args)
         print(f"validation error: {validation_error}")
         writer.add_scalar('Val_error', validation_error, epoch)
         writer.flush()
@@ -86,6 +97,7 @@ if __name__ == "__main__":
     parser.add_argument('--activation', default='ReLU', choices=['ReLU', 'Sigmoid'], type=str, help='activation function')
     parser.add_argument('--activation_noether', default='ReLU', choices=['ReLU', 'Sigmoid'], type=str, help='noether activation function')
     parser.add_argument('--embedding_dim', default=8, type=int, help='dimension of the Noether embedding')
+    parser.add_argument("--baseline", action="store_true", help="whether to train the baseline model (no tailoring)")
     args = parser.parse_args()
 
     main(args)
