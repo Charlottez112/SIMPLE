@@ -65,7 +65,7 @@ def evaluate_baseline(
             # no ground truth state for it's next state.
             curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
             label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
-            for i, (current_state, next_state) in enumerate(
+            for j, (current_state, next_state) in enumerate(
                 zip(curr_iter, label_iter)
             ):
                 # Unpack data.
@@ -81,7 +81,7 @@ def evaluate_baseline(
                 # On the first step, the initial position, velocity, and boxdim are input.
                 # On all subsequent steps, the previous step's position and velocity preds,
                 # plus the current timestep's boxdim (from the user) are input.
-                if i == 0:
+                if j == 0:
                     next_state_pred = f(position, velocity, boxdim)
                 else:
                     prev_state_pred = state_preds[-1]
@@ -239,9 +239,7 @@ def evaluate(
                 # no ground truth state for it's next state.
                 curr_iter = iter_frames(sim_position, sim_velocity, sim_boxdim)
                 label_iter = iter_frames(sim_position, sim_velocity, sim_boxdim, skip=1)
-                for i, (current_state, next_state) in enumerate(
-                    zip(curr_iter, label_iter)
-                ):
+                for j, (current_state, next_state) in enumerate(zip(curr_iter, label_iter)):
                     # Unpack data.
                     position, velocity, boxdim = current_state
                     position = position.to(device)
@@ -255,7 +253,7 @@ def evaluate(
                     # On the first step, the initial position, velocity, and boxdim are input.
                     # On all subsequent steps, the previous step's position and velocity preds,
                     # plus the current timestep's boxdim (from the user) are input.
-                    if i == 0:
+                    if j == 0:
                         next_state_pred = func_f(position, velocity, boxdim)
                     else:
                         prev_state_pred = state_preds[-1]
