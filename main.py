@@ -67,7 +67,7 @@ def main(args):
         print(f"Epoch {epoch}")
 
         train_fn(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
-        val_error_total, val_error_pos, val_error_vel = eval_fn(f, g_list, eval_loader, writer, args)
+        val_error_total, val_error_pos, val_error_vel = eval_fn(f, g_list, eval_loader, epoch, writer, args)
         print(f"validation error: {val_error_total}")
         writer.add_scalar('Val_error/total', val_error_total, epoch)
         writer.add_scalar('Val_error/position', val_error_pos, epoch)

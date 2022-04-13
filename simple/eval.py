@@ -17,6 +17,7 @@ def evaluate_baseline(
     f: nn.Module,
     g_list: list[nn.Module],
     loader: DataLoader,
+    epoch: int,
     writer: torch.utils.tensorboard.SummaryWriter,
     args: argparse.Namespace,
 ) -> float:
@@ -98,8 +99,8 @@ def evaluate_baseline(
                 task_loss_pos = task_loss_pos.cpu().detach()
                 task_loss_vel = task_loss_vel.cpu().detach()
 
-                writer.add_scalar(f'Loss/Val/batch_{i}/position_step', task_loss_pos, step_counter)
-                writer.add_scalar(f'Loss/Val/batch_{i}/velocity_step', task_loss_vel, step_counter)
+                writer.add_scalar(f'Loss/Val/{epoch}/batch_{i}/position_step', task_loss_pos, step_counter)
+                writer.add_scalar(f'Loss/Val/{epoch}/batch_{i}/velocity_step', task_loss_vel, step_counter)
                 step_counter += 1
 
                 task_losses.append(task_loss_total.cpu().detach())
@@ -132,6 +133,7 @@ def evaluate(
     f: nn.Module,
     g_list: list[nn.Module],
     loader: DataLoader,
+    epoch: int,
     writer: torch.utils.tensorboard.SummaryWriter,
     args: argparse.Namespace,
 ) -> float:
@@ -201,7 +203,34 @@ def evaluate(
 
             # Tailor the state predictor on the Noether loss.
             noether_loss = noether_loss_func(noether_embeddings)
+            # Log the initial neother loss
+            writer.add_scalar(f'Noether_Loss/Val/{epoch}/initial', noether_loss, i)
             diff_inner_optimizer.step(noether_loss)
+
+            # Re-predict the next states on Tailored State predictor
+            noether_embeddings = []
+            for position, velocity, boxdim in iter_frames(
+                sim_position, sim_velocity, sim_boxdim
+            ):  
+
+                position = position.to(device)
+                velocity = velocity.to(device)
+                boxdim = boxdim.to(device)
+
+                # Compute the next state prediction.
+                next_state_pred = func_f(position, velocity, boxdim)
+
+                # Run through all quantity predictors to compute Noether embeddings.
+                # NOTE: All quantity predictor modules must return tensors of shape [B, e].
+                noether_embedding = torch.concat(
+                    [g(next_state_pred) for g in g_list], dim=1
+                )
+                noether_embeddings.append(noether_embedding)
+
+            
+            noether_loss = noether_loss_func(noether_embeddings)
+            # Log the final neother loss
+            writer.add_scalar(f'Noether_Loss/Val/{epoch}/Final', noether_loss, i)
 
             # Henceforth are pure inference.
             with torch.no_grad():
@@ -239,12 +268,12 @@ def evaluate(
                         state_preds[-1] = prev_state_pred.cpu()
 
                     # Compute and save task loss.
-                    task_loss_total, task_loss_pos, task_loss_vel =task_loss(next_state_pred, label)
+                    task_loss_total, task_loss_pos, task_loss_vel = task_loss(next_state_pred, label)
                     task_loss_pos = task_loss_pos.cpu().detach()
                     task_loss_vel = task_loss_vel.cpu().detach()
                     
-                    writer.add_scalar(f'Loss/Val/batch_{i}/position_step', task_loss_pos, step_counter)
-                    writer.add_scalar(f'Loss/Val/batch_{i}/velocity_step', task_loss_vel, step_counter)
+                    writer.add_scalar(f'Loss/Val/{epoch}/batch_{i}/position_step', task_loss_pos, step_counter)
+                    writer.add_scalar(f'Loss/Val/{epoch}/batch_{i}/velocity_step', task_loss_vel, step_counter)
                     step_counter += 1
                     
                     task_losses.append(task_loss_total.cpu().detach())
