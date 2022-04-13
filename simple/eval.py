@@ -288,14 +288,14 @@ def evaluate(
                 writer.flush()
 
 
-            # Track inference latency.
-            inference_latency = time.time() - batch_start_time
-            latencies.append(inference_latency)
-            print(f"Inference latency: {inference_latency}")
+        # Track inference latency.
+        inference_latency = time.time() - batch_start_time
+        latencies.append(inference_latency)
+        print(f"Inference latency: {inference_latency}")
 
-        # Compute mean inference latency and print.
-        print(f"Mean inference latency: {sum(latencies) / len(latencies)}")
-        print(f"Mean inference latency excluding first batch: {sum(latencies[1:]) / len(latencies[1:])}")
+    # Compute mean inference latency and print.
+    print(f"Mean inference latency: {sum(latencies) / len(latencies)}")
+    print(f"Mean inference latency excluding first batch: {sum(latencies[1:]) / len(latencies[1:])}")
 
     return sum(task_losses) / len(task_losses), sum(position_losses) / len(position_losses), sum(velocity_losses) / len(velocity_losses)
 
