@@ -132,6 +132,7 @@ def train_one_epoch(
     # Train.
     for i, data in enumerate(loader):
         print(f"Batch {i}")
+        step_counter = 0
 
         # Unpack data.
         sim_position: torch.Tensor = data["position"]  # [B, F, N, 3]
@@ -190,8 +191,9 @@ def train_one_epoch(
                 # Compute the next state prediction.
                 next_state_pred = func_f(position, velocity, boxdim)
                 task_loss_total, task_loss_pos, task_loss_vel =task_loss(next_state_pred, label)
-                writer.add_scalar('Loss/task/position_step', task_loss_pos)
-                writer.add_scalar('Loss/task/velocity_step', task_loss_vel)
+                writer.add_scalar(f'Loss/train/epoch_{epoch}/batch_{i}/position_step', task_loss_pos, step_counter)
+                writer.add_scalar(f'Loss/train/epoch_{epoch}/batch_{i}/velocity_step', task_loss_vel, step_counter)
+                step_counter += 1
                 task_losses.append(task_loss_total)
                 task_losses_pos.append(task_loss_pos)
                 task_losses_vel.append(task_loss_vel)

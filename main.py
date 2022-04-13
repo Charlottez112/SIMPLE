@@ -65,10 +65,13 @@ def main(args):
     # Run training.
     for epoch in range(args.num_epochs):
         print(f"Epoch {epoch}")
+
         train_fn(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
-        validation_error = eval_fn(f, g_list, eval_loader, args)
-        print(f"validation error: {validation_error}")
-        writer.add_scalar('Val_error', validation_error, epoch)
+        val_error_total, val_error_pos, val_error_vel = eval_fn(f, g_list, eval_loader, writer, args)
+        print(f"validation error: {val_error_total}")
+        writer.add_scalar('Val_error/total', val_error_total, epoch)
+        writer.add_scalar('Val_error/position', val_error_pos, epoch)
+        writer.add_scalar('Val_error/velocity', val_error_vel, epoch)
         writer.flush()
     writer.close()
 
