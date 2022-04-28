@@ -16,6 +16,6 @@ sim["velocity"].shape  # (300, 4096, 3)
 sim["boxdim"].shape    # (300,)
 ```
 
-where 300 is the number of time steps in the simulation and 4096 is the number of particles.
+where 300 is the number of sampled frames in the simulation and 4096 is the number of particles.
 We simulated a 3D system, and thus `position` and `velocity` are 3D vectors.
 `boxdim` is the dimension of the simulation box where particles reside.
