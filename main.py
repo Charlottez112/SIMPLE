@@ -12,8 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from simple.model import StatePredictor, LearnedQuantityPredictor, TemperaturePredictor
 from simple.data import SimulationDataLoader
-from simple.train import train_baseline_one_epoch, train_one_epoch
-from simple.eval import evaluate_baseline, evaluate
+from simple.train import train_one_epoch
+from simple.eval import evaluate
 
 
 def main(args):
@@ -47,27 +47,17 @@ def main(args):
     )
 
     # Initialize the outer optimizer (the one that backprops from task_loss).
-    if args.baseline:
-        # For the baseline, this is the only optimizer. Also, it is assumed that
-        # only the TemperaturePredictor will be used as the g network.
-        outer_optimizer = torch.optim.Adam(params=f.parameters(), lr=args.outer_lr)
-        if any(isinstance(g, LearnedQuantityPredictor) for g in g_list):
-            raise ValueError("LearnedQuantityPredictor is useless for the baseline.")
-    else:
-        outer_params = list(f.parameters())
-        for g in g_list:
-            outer_params.extend(list(g.parameters()))
-        outer_optimizer = torch.optim.Adam(params=outer_params, lr=args.outer_lr)
-
-    train_fn = train_baseline_one_epoch if args.baseline else train_one_epoch
-    eval_fn = evaluate_baseline if args.baseline else evaluate
+    outer_params = list(f.parameters())
+    for g in g_list:
+        outer_params.extend(list(g.parameters()))
+    outer_optimizer = torch.optim.Adam(params=outer_params, lr=args.outer_lr)
 
     # Run training.
     for epoch in range(args.num_epochs):
         print(f"Epoch {epoch}")
 
-        train_fn(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
-        val_error_total, val_error_pos, val_error_vel = eval_fn(f, g_list, eval_loader, epoch, writer, args)
+        train_one_epoch(f, g_list, train_loader, outer_optimizer, epoch, writer, args)
+        val_error_total, val_error_pos, val_error_vel = evaluate(f, g_list, eval_loader, epoch, writer, args)
         print(f"validation error: {val_error_total}")
         writer.add_scalar('Val_error/total', val_error_total, epoch)
         writer.add_scalar('Val_error/position', val_error_pos, epoch)
@@ -100,7 +90,6 @@ if __name__ == "__main__":
     parser.add_argument('--activation', default='ReLU', choices=['ReLU', 'Sigmoid'], type=str, help='activation function')
     parser.add_argument('--activation_noether', default='ReLU', choices=['ReLU', 'Sigmoid'], type=str, help='noether activation function')
     parser.add_argument('--embedding_dim', default=8, type=int, help='dimension of the Noether embedding')
-    parser.add_argument("--baseline", action="store_true", help="whether to train the baseline model (no tailoring)")
     args = parser.parse_args()
 
     main(args)
